@@ -1,4 +1,4 @@
 fastapi==0.115.0
 uvicorn==0.34.0
-databricks-sdk>=0.100.0
+databricks-sdk==0.166.0
 psycopg[binary]==3.2.9

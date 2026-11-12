@@ -17,10 +17,10 @@ client = WorkspaceClient(config=Config())
 QUERIES = {
     'kpis': 'SELECT * FROM serving.kpi_summary ORDER BY period DESC LIMIT 2',
     'trend': 'SELECT date, revenue FROM serving.revenue_daily ORDER BY date',
-    'top': 'SELECT customer_name, revenue, margin FROM serving.customer_revenue ORDER BY revenue DESC, customer_id LIMIT 10',
-    'bottom': 'SELECT customer_name, revenue, margin FROM serving.customer_revenue ORDER BY revenue, customer_id LIMIT 10',
-    'products': 'SELECT product_name, revenue, margin_pct FROM serving.product_performance ORDER BY revenue DESC, product_id LIMIT 10',
-    'promotions': 'SELECT promotion_name, lift_pct, promo_revenue FROM serving.promotion_lift ORDER BY lift_pct DESC NULLS LAST',
+    'top': 'SELECT customer_name, revenue FROM serving.customer_revenue ORDER BY revenue DESC NULLS LAST, customer_id LIMIT 10',
+    'bottom': 'SELECT customer_name, revenue FROM serving.customer_revenue ORDER BY revenue ASC NULLS LAST, customer_id LIMIT 10',
+    'products': 'SELECT product_name, revenue, margin_pct FROM serving.product_performance ORDER BY revenue DESC NULLS LAST, product_id LIMIT 10',
+    'promotions': 'SELECT promotion_name, lift_pct FROM serving.promotion_lift ORDER BY lift_pct DESC NULLS LAST, promotion_id',
     'summary': 'SELECT * FROM serving.executive_summary ORDER BY period DESC LIMIT 1',
 }
 
@@ -44,6 +44,11 @@ def dashboard():
             query_ms = round((perf_counter() - query_start) * 1000, 1)
         if not result['kpis']:
             raise HTTPException(503, 'Snapshot is empty. Run the data and sync pipelines.')
+        for row in result['kpis']:
+            row['revenue_per_customer'] = (
+                row['revenue'] / row['active_customers']
+                if row['active_customers'] and row['revenue'] is not None else None
+            )
         result['query_ms'] = query_ms
         result['total_ms'] = round((perf_counter() - started) * 1000, 1)
         log.info('Lakebase dashboard rows=%s query_ms=%s total_ms=%s',
