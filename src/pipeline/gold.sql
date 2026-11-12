@@ -45,7 +45,7 @@ SELECT p.product_id, p.product_name, p.category, p.brand,
        sum(l.quantity) AS units,
        round(sum(l.revenue), 2) AS revenue,
        round(sum(l.revenue - l.cost), 2) AS margin,
-       round(100 * sum(l.revenue - l.cost) / sum(l.revenue), 1) AS margin_pct,
+       round(100 * try_divide(sum(l.revenue - l.cost), sum(l.revenue)), 1) AS margin_pct,
        CAST(rank() OVER (ORDER BY sum(l.revenue) DESC) AS INT) AS revenue_rank
 FROM silver.products p JOIN silver.order_lines l USING (product_id)
 GROUP BY p.product_id, p.product_name, p.category, p.brand;
@@ -82,7 +82,7 @@ SELECT promotion_id, promotion_name, category, discount_pct, start_date, end_dat
        round(promo_margin, 2) AS promo_margin,
        round(promo_revenue / (datediff(end_date, start_date) + 1), 2) AS promo_daily_revenue,
        round(base_revenue / 28, 2) AS baseline_daily_revenue,
-       round(100 * (promo_revenue / (datediff(end_date, start_date) + 1) / (base_revenue / 28) - 1), 1) AS lift_pct
+       round(100 * (try_divide(promo_revenue / (datediff(end_date, start_date) + 1), base_revenue / 28) - 1), 1) AS lift_pct
 FROM agg;
 
 -- One row per month; the executive summary reads this table.
@@ -103,7 +103,7 @@ WITH m AS (
   FROM silver.order_lines GROUP BY 1
 )
 SELECT period, round(revenue, 2) AS revenue, round(margin, 2) AS margin,
-       round(100 * margin / revenue, 1) AS margin_pct, orders, active_customers,
-       round(revenue / orders, 2) AS avg_order_value,
-       round(100 * (revenue / lag(revenue) OVER (ORDER BY period) - 1), 1) AS revenue_mom_pct
+       round(100 * try_divide(margin, revenue), 1) AS margin_pct, orders, active_customers,
+       round(try_divide(revenue, orders), 2) AS avg_order_value,
+       round(100 * (try_divide(revenue, lag(revenue) OVER (ORDER BY period)) - 1), 1) AS revenue_mom_pct
 FROM m;

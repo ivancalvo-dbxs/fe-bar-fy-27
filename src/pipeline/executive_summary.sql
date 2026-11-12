@@ -1,6 +1,7 @@
 -- GenAI step: ai_query (through the Unity Gateway model service) writes the monthly executive narrative.
 -- Only the 3 latest months are summarized, so the cost stays negligible.
 -- A refresh recomputes the whole table: same inputs, same rows, no duplicates.
+-- With failOnError => false ai_query returns STRUCT<result, errorMessage> (verified on this runtime; `.response` does not exist).
 -- failOnError => false keeps the pipeline green; a template narrative is used and flagged in `model`.
 CREATE OR REFRESH MATERIALIZED VIEW gold.executive_summary (
   period STRING NOT NULL,
@@ -10,7 +11,8 @@ CREATE OR REFRESH MATERIALIZED VIEW gold.executive_summary (
   CONSTRAINT executive_summary_pk PRIMARY KEY (period)
 ) AS
 WITH top_customers AS (
-  SELECT concat_ws('; ', collect_list(concat(customer_name, ' (', segment, ', ', region, ') revenue ', CAST(round(revenue) AS STRING)))) AS top3,
+  SELECT concat_ws('; ', transform(sort_array(collect_list(struct(revenue_rank AS rk,
+           concat(customer_name, ' (', segment, ', ', region, ') revenue ', CAST(round(revenue) AS STRING)) AS txt))), x -> x.txt)) AS top3,
          round(100 * try_divide(sum(revenue), (SELECT sum(revenue) FROM gold.customer_revenue)), 1) AS top3_share_pct
   FROM gold.customer_revenue WHERE revenue_rank <= 3
 ), k AS (
@@ -31,7 +33,7 @@ WITH top_customers AS (
 SELECT period,
        concat('Revenue ', CAST(round(revenue / 1000000, 2) AS STRING), 'M in ', period, ', ',
               IF(revenue_mom_pct >= 0, '+', ''), CAST(revenue_mom_pct AS STRING), '% vs prior month, margin ', CAST(margin_pct AS STRING), '%') AS headline,
-       coalesce(ai.result,
+       IF(ai.errorMessage IS NULL AND ai.result IS NOT NULL, ai.result,
                 concat('Revenue was ', CAST(revenue AS STRING), ' with ', CAST(orders AS STRING), ' orders from ', CAST(active_customers AS STRING), ' customers.')) AS narrative,
-       IF(ai.result IS NULL, 'template', '${llm_endpoint}') AS model
+       IF(ai.errorMessage IS NULL AND ai.result IS NOT NULL, '${llm_endpoint}', 'template') AS model
 FROM r;
