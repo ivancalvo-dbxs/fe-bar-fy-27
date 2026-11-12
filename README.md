@@ -7,12 +7,14 @@ Serving details and the refresh runbook are in [SERVING.md](SERVING.md).
 > The business context behind this project is internal and confidential.
 > The real partner name is replaced by the fictional **ACME Corp**, and named prospects stay as REDACTED_1 and REDACTED_2.
 > All data is synthetic, and the repo contains no workspace URLs, e-mails, IDs or tokens.
-> Sizing, onboarding and go-live dates are directional and not customer-confirmed.
+> The sizing in the business context ($15K commit, $180K+ benchmark) and any onboarding or go-live timing are directional and not customer-confirmed.
 
 ## Built with Unity Gateway
 
 This project was developed using the Unity Gateway ([UG repository](https://github.com/databricks/unity-gateway)).
 The executive summary calls a gateway model service (`system.ai.claude-haiku-5-5`) through `ai_query`, so model access, permissions and governance stay in Unity Catalog.
+In this repo the gateway is used in `src/pipeline/executive_summary.sql`, and the service name comes from the `llm_endpoint` variable in `databricks.yml`.
+The name was discovered with the CLI command `databricks ai-gateway list-model-services --parent schemas/system.ai`.
 The Databricks agent skills (core, DABs, jobs, pipelines, Lakebase, apps, Genie, unity-gateway) were the reference for every resource.
 
 ## Business context and impact
@@ -42,11 +44,11 @@ The app answers the question leadership asks first: how is the business doing, a
 | 2 | Unity Catalog | Schemas `bronze`, `silver`, `gold`; volume `bronze.raw_synthetic` | Governed storage for raw files and the medallion tables |
 | 3 | GenAI | `gold.executive_summary` | `ai_query` over the KPIs through Unity Gateway; template fallback marked `template` |
 | 4 | Lakebase | Project plus six synced tables | Gold tables snapshot-synced to Postgres, primary keys from UC constraints |
-| 5 | Genie | Curated space over gold | Ad hoc questions with sample queries |
+| 5 | Genie | Curated space over gold | Ad hoc questions with curated sample questions |
 | 6 | App | FastAPI app | KPI strip, revenue trend, top and bottom customers, products, promotion lift, AI summary |
 
 Single source of truth rule: the app queries only Lakebase, never Unity Catalog tables or a SQL warehouse.
-Its service principal has CONNECT and explicit SELECT on the six tables, with database CREATE revoked.
+The platform attachment grants the app principal CONNECT, then `scripts/grant_app.py` revokes database CREATE and grants SELECT on the six tables only.
 
 ```
 Job -> Volume -> SDP bronze/silver/gold -> ai_query summary
@@ -56,7 +58,8 @@ gold (6 tables) -> synced tables -> Lakebase -> App
 
 ## Measured results
 
-All numbers come from runs on a real workspace with synthetic data.
+All numbers are self-reported from runs on a real workspace with synthetic data.
+Run logs are not committed, to keep the repo small, and every count can be reproduced with the commands under Run it.
 
 | Measure | Result |
 |---------|--------|
@@ -91,7 +94,10 @@ Sample AI summary, period 2026-10: "October 2026 revenue reached $845,968.61, up
 
 A tech-lead agent split the work into three tasks and ran each in its own git worktree with a different vendor's coding agent.
 Claude Code built the data layer, Codex built the serving layer, and Cursor and Claude Code cross-reviewed each other's PRs from saved diffs.
-One review failure was investigated, disproved with a live query, and the review's cheap hardening items (`try_divide`, stable ordering) were applied.
+The work landed as PRs #1 to #4.
+Cursor's FAIL on PR #1 claimed `ai_query` returns `.response`, and a live `typeof` query showed it returns `.result`, so the finding was rejected while its `try_divide` and stable-ordering suggestions were applied.
+Claude Code's PASS on the serving PR came with 12 non-blocking notes, and the grant-persistence check, UI formatting, null guards and tests were applied, taking the app tests to 15.
+Prompts and agent transcripts are not committed.
 Humans merge; agents only open PRs.
 
 ## Run it
