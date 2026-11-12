@@ -1,0 +1,17 @@
+resources:
+  pipelines:
+    medallion:
+      name: acme-rct-medallion
+      catalog: ${var.catalog}
+      # default schema only; every dataset is published to its own schema by name
+      schema: ${resources.schemas.gold.name}
+      serverless: true
+      continuous: false
+      channel: CURRENT
+      root_path: ../src/pipeline
+      libraries:
+        - glob:
+            include: ../src/pipeline/**
+      configuration:
+        volume_path: /Volumes/${var.catalog}/${resources.schemas.bronze.name}/${resources.volumes.raw_synthetic.name}
+        llm_endpoint: ${var.llm_endpoint}
