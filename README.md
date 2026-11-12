@@ -67,8 +67,10 @@ All numbers come from runs on a real workspace with synthetic data.
 | Pipeline runtime | about 81 to 90 s end to end on serverless |
 | AI summary | 3 rows in 12 to 14 s, about 4 s per row |
 | Snapshot sync | 6 of 6 tables ONLINE, row counts equal gold, 5.9 to 8.0 s each |
-| Lakebase queries | 7 queries per page load, 33.6 to 34.1 ms total |
-| App HTTP latency | 720 to 1,109 ms per page, including per-request OAuth |
+| Lakebase queries | 7 queries per page load, 31.1 ms total (33.6 to 34.1 ms before UI hardening) |
+| App latency | handler 143.9 ms, full HTTP request 743 ms including per-request OAuth |
+| App tests | 15 collected cases, all passing; DOM checks at desktop and mobile widths |
+| Grants after sync refresh | SELECT survived a snapshot refresh; the grant script is idempotent |
 | Genie checks | latest monthly revenue per customer $176.32; top customer $219,740.03; best promotion lift 137.2% |
 | Reruns | a second run gave identical counts (idempotent) |
 
