@@ -1,0 +1,44 @@
+# Serving layer operations
+
+The bundle owns one dedicated Lakebase Autoscaling project, six snapshot synced tables, a curated Genie space and a Python FastAPI app.
+Genie alone uses a SQL warehouse; all app business queries use Lakebase.
+The project uses its automatically created production branch and databricks_postgres database, dedicated to this app.
+
+The synthetic data job and medallion pipeline must have run successfully before deploying the serving resources; all six gold source tables must exist.
+
+```sh
+export BUNDLE_VAR_catalog=your_existing_catalog
+databricks bundle validate --strict -t dev --profile <profile>
+databricks bundle deploy -t dev --profile <profile>
+# Wait for all six postgres get-synced-table statuses to be ONLINE.
+# Install app/requirements.txt in your local virtual environment first.
+python scripts/grant_app.py --profile <profile> --target dev
+databricks bundle run leadership -t dev --profile <profile>
+```
+
+The app name defaults to the current user's domain-friendly name with an ACME prefix.
+If it exceeds 30 characters or collides, set an uncommitted app_name override in `.databricks/bundle/dev/variable-overrides.json`.
+The Genie warehouse is looked up by display name; override genie_warehouse for another existing warehouse.
+No workspace-specific identifiers are stored in source control.
+
+Snapshot mode deliberately avoids continuous compute for this synthetic demonstration.
+Refresh view reloads the existing Lakebase copy and does not refresh the snapshot.
+To refresh after the data pipeline runs, get each synced table's pipeline_id with `databricks postgres get-synced-table synced_tables/<catalog>.serving.<table> --profile <profile>`, then run `databricks pipelines start-update <pipeline_id> --profile <profile>` and wait for ONLINE again.
+A customer_revenue snapshot refresh was verified end to end: its SELECT grant survived, and the app returned real data without rerunning grants.
+Run grant_app.py after new tables or app resource changes; the script is idempotent and accepts an explicit bundle target.
+The platform attachment initially grants CONNECT and CREATE; grant_app.py revokes database CREATE and grants only schema USAGE and SELECT on the six explicit tables.
+No UC privileges or warehouse access are granted to the app principal.
+All app users see the same synthetic data through the app service principal; the app does not apply per-user data permissions.
+
+KPIs show the latest available month beside the prior month's value.
+Customer and product rankings cover all periods; monthly distinct customers must never be summed.
+Revenue per customer means monthly revenue divided by monthly active customers.
+Promotion lift is descriptive category daily revenue versus the preceding 28-day baseline, not a causal estimate.
+Executive summaries are generated upstream through Unity Gateway, copied into Lakebase, labeled AI-generated and displayed with their own period and model.
+A fresh OAuth database credential is generated for every dashboard request; connections close after the seven bounded SELECT queries.
+This favors simple credential rotation over connection reuse for this small leadership dashboard.
+
+Verification uses text output from the app JSON endpoint, app logs, sync status, Postgres row counts and Genie conversation query results.
+The dashboard logs row counts and query/total latency without logging customer records or credentials.
+HTTP tests cover the page, success payload, revenue per customer including zero/null inputs, missing environment variables, read-only connection, empty snapshot and redacted database errors.
+Ranking tests execute the queries over fixtures with ties and null revenues.
