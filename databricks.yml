@@ -12,6 +12,17 @@ variables:
     description: Unity Gateway model service used by ai_query for the executive summary
     default: system.ai.claude-haiku-5-5
 
+  app_name:
+    description: Workspace-unique leadership app name
+    default: acme-${workspace.current_user.domain_friendly_name}
+  lakebase_project:
+    description: Dedicated ACME Lakebase project name
+    default: acme-rct-serving
+  genie_warehouse:
+    description: Existing warehouse used only by Genie
+    lookup:
+      warehouse: Serverless Starter Warehouse
+
 targets:
   dev:
     default: true

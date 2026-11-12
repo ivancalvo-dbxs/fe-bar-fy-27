@@ -1,0 +1,116 @@
+resources:
+  postgres_projects:
+    serving:
+      project_id: ${var.lakebase_project}
+      display_name: ACME leadership analytics
+  schemas:
+    serving_schema:
+      catalog_name: ${var.catalog}
+      name: serving
+      comment: Lakebase synced copies of curated gold data
+  postgres_synced_tables:
+    customer_revenue:
+      synced_table_id: ${var.catalog}.${resources.schemas.serving_schema.name}.customer_revenue
+      source_table_full_name: ${var.catalog}.gold.customer_revenue
+      primary_key_columns: [customer_id]
+      scheduling_policy: SNAPSHOT
+      branch: ${resources.postgres_projects.serving.name}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+    revenue_daily:
+      synced_table_id: ${var.catalog}.${resources.schemas.serving_schema.name}.revenue_daily
+      source_table_full_name: ${var.catalog}.gold.revenue_daily
+      primary_key_columns: [date]
+      scheduling_policy: SNAPSHOT
+      branch: ${resources.postgres_projects.serving.name}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+    product_performance:
+      synced_table_id: ${var.catalog}.${resources.schemas.serving_schema.name}.product_performance
+      source_table_full_name: ${var.catalog}.gold.product_performance
+      primary_key_columns: [product_id]
+      scheduling_policy: SNAPSHOT
+      branch: ${resources.postgres_projects.serving.name}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+    promotion_lift:
+      synced_table_id: ${var.catalog}.${resources.schemas.serving_schema.name}.promotion_lift
+      source_table_full_name: ${var.catalog}.gold.promotion_lift
+      primary_key_columns: [promotion_id]
+      scheduling_policy: SNAPSHOT
+      branch: ${resources.postgres_projects.serving.name}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+    kpi_summary:
+      synced_table_id: ${var.catalog}.${resources.schemas.serving_schema.name}.kpi_summary
+      source_table_full_name: ${var.catalog}.gold.kpi_summary
+      primary_key_columns: [period]
+      scheduling_policy: SNAPSHOT
+      branch: ${resources.postgres_projects.serving.name}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+    executive_summary:
+      synced_table_id: ${var.catalog}.${resources.schemas.serving_schema.name}.executive_summary
+      source_table_full_name: ${var.catalog}.gold.executive_summary
+      primary_key_columns: [period]
+      scheduling_policy: SNAPSHOT
+      branch: ${resources.postgres_projects.serving.name}/branches/production
+      postgres_database: databricks_postgres
+      create_database_objects_if_missing: true
+  apps:
+    leadership:
+      name: ${var.app_name}
+      description: ACME Corp leadership insights served exclusively by Lakebase
+      source_code_path: ../app
+      resources:
+        - name: postgres
+          postgres:
+            branch: ${resources.postgres_projects.serving.name}/branches/production
+            database: ${resources.postgres_projects.serving.name}/branches/production/databases/databricks-postgres
+            permission: CAN_CONNECT_AND_CREATE
+      config:
+        command: [python, app.py]
+        env:
+          - name: LAKEBASE_ENDPOINT
+            value_from: postgres
+  genie_spaces:
+    genie_leadership:
+      title: ACME Corp leadership analytics
+      description: Synthetic RCT revenue, customer value, products and promotion performance
+      warehouse_id: ${var.genie_warehouse}
+      serialized_space:
+        version: 2
+        config:
+          sample_questions:
+            - id: '10000000000000000000000000000001'
+              question: ["What is revenue per active customer in the latest month?"]
+            - id: '10000000000000000000000000000002'
+              question: ["Which five customers generated the most revenue across all periods?"]
+            - id: '10000000000000000000000000000003'
+              question: ["Which promotions had the highest revenue lift?"]
+        data_sources:
+          tables:
+            - identifier: ${var.catalog}.gold.customer_revenue
+            - identifier: ${var.catalog}.gold.executive_summary
+            - identifier: ${var.catalog}.gold.kpi_summary
+              column_configs:
+                - column_name: active_customers
+                  description: ['Distinct customers ordering in this month; not additive across months.']
+                - column_name: margin_pct
+                  description: ['100 times monthly margin dollars divided by revenue.']
+                - column_name: period
+                  description: ['Calendar month yyyy-MM; one row per month.']
+                - column_name: revenue
+                  description: ['Monthly revenue in USD after line discounts.']
+            - identifier: ${var.catalog}.gold.product_performance
+            - identifier: ${var.catalog}.gold.promotion_lift
+            - identifier: ${var.catalog}.gold.revenue_daily
+        instructions:
+          text_instructions:
+            - id: '20000000000000000000000000000001'
+              content:
+                - ACME Corp is fictional. All data is synthetic and amounts are USD.
+                - Default monthly questions to the latest period in kpi_summary and state the period. Revenue per customer is revenue / active_customers. Never sum monthly distinct customers.
+                - customer_revenue and product_performance cover all periods. Do not present their rankings as monthly. Tables have different grains; avoid joins that multiply revenue.
+                - margin is profit dollars; margin_pct is percentage points. Promotion lift compares category daily revenue during the promotion against the preceding 28-day daily baseline; it is descriptive, not causal.
+                - executive_summary contains AI-generated commentary. Label it as AI-generated and verify against kpi_summary.
