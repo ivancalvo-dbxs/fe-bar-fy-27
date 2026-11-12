@@ -64,20 +64,33 @@ Run logs are not committed, to keep the repo small, and every count can be repro
 | Measure | Result |
 |---------|--------|
 | Source rows | 150,000 orders, 337,674 order items, 8,000 customers, 300 products |
-| Silver order lines | 327,535 (completed orders only) |
 | Gold rows | customer_revenue 8,000, revenue_daily 669, product_performance 300, promotion_lift 14, kpi_summary 22, executive_summary 3 |
-| Data job runtime | 37 s (43 s cold) |
-| Pipeline runtime | about 81 to 90 s end to end on serverless |
+| Runtimes | data job 37 s; pipeline 81 to 90 s end to end on serverless |
 | AI summary | 3 rows in 12 to 14 s, about 4 s per row |
 | Snapshot sync | 6 of 6 tables ONLINE, row counts equal gold, 5.9 to 8.0 s each |
 | Lakebase queries | 7 queries per page load, 31.1 ms total (33.6 to 34.1 ms before UI hardening) |
 | App latency | handler 143.9 ms, full HTTP request 743 ms including per-request OAuth |
 | App tests | 15 collected cases, all passing; DOM checks at desktop and mobile widths |
-| Grants after sync refresh | SELECT survived a snapshot refresh; the grant script is idempotent |
-| Genie checks | latest monthly revenue per customer $176.32; top customer $219,740.03; best promotion lift 137.2% |
-| Reruns | a second run gave identical counts (idempotent) |
+| Genie checks | revenue per customer $176.32; top customer $219,740.03; best promotion lift 137.2% |
+| Reruns | identical counts on a second run; SELECT grants survived a snapshot refresh |
 
-Sample AI summary, period 2026-10: "October 2026 revenue reached $845,968.61, up 2.8% from the prior month, with a gross margin of $327,952.32 (38.8%)."
+## What leadership learns from the app
+
+Read from the deployed app for October 2026.
+The data is synthetic, so the point is the kind of decision it supports, not the values.
+
+| Signal in the app | Reading | Decision it supports |
+|-------------------|---------|----------------------|
+| Revenue $845,969 vs $822,822 prior month | +2.8% | Growth is on track |
+| Orders 9,598 vs 9,082 | +5.7%, so average order value fell from about $90.6 to $88.1 | Growth is volume, not basket size: test bundling and upsell |
+| Active customers 4,798 vs 4,725, revenue per customer $176 vs $174 | +1.5% and +1% | The base grows slowly and value per customer barely moves |
+| Top customer $219,740, second $79,540; bottom 10 earn $14 to $58 | Top is 2.8x the runner-up; a long tail of low-value accounts | Protect key accounts, run activation offers for the tail |
+| Product margin 25.6% (top seller) vs 48.4% (#5 seller) | A 22.8 point spread among the top 10 | Steer the mix toward high-margin items, not just revenue |
+| Promotion lift: discounts of 15% or less lift 51% to 137%, 30% discounts lift 32% to 34% | Deeper discounts did not lift more | Cut discount depth first (descriptive, not causal) |
+
+Trade promotion pricing, demand planning and shopper insights are the accelerators that act on these signals.
+The app is what clients can buy on Databricks paper, with consumption counting toward the $15K commit.
+These synthetic values do not validate the $180K+ benchmark.
 
 ## Decisions and trade-offs
 
@@ -96,7 +109,7 @@ A tech-lead agent split the work into three tasks and ran each in its own git wo
 Claude Code built the data layer, Codex built the serving layer, and Cursor and Claude Code cross-reviewed each other's PRs from saved diffs.
 The work landed as PRs #1 to #4.
 Cursor's FAIL on PR #1 claimed `ai_query` returns `.response`, and a live `typeof` query showed it returns `.result`, so the finding was rejected while its `try_divide` and stable-ordering suggestions were applied.
-Claude Code's PASS on the serving PR came with 12 non-blocking notes, and the grant-persistence check, UI formatting, null guards and tests were applied, taking the app tests to 15.
+Claude Code's PASS on the serving PR came with 12 notes, and the key ones (grant persistence, UI formatting, null guards, tests) were applied.
 Prompts and agent transcripts are not committed.
 Humans merge; agents only open PRs.
 
@@ -110,7 +123,3 @@ databricks bundle run -t dev --profile <profile> <job_or_pipeline>
 ```
 
 See SERVING.md for the grants step and the app start.
-
-## Not covered
-
-Continuous sync, CI, multi-target promotion, and the Built On and Marketplace steps themselves.
