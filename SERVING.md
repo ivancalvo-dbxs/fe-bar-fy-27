@@ -40,5 +40,5 @@ This favors simple credential rotation over connection reuse for this small lead
 
 Verification uses text output from the app JSON endpoint, app logs, sync status, Postgres row counts and Genie conversation query results.
 The dashboard logs row counts and query/total latency without logging customer records or credentials.
-HTTP tests cover the page, success payload, revenue per customer including zero/null inputs, missing environment variables, read-only connection, empty snapshot and redacted database errors.
+HTTP tests cover the page, success payload, revenue per customer including zero/null inputs, missing environment variables, the read-only connection option passed to the database, empty snapshot and redacted database errors.
 Ranking tests execute the queries over fixtures with ties and null revenues.
