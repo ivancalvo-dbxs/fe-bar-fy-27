@@ -1,0 +1,20 @@
+bundle:
+  name: acme-rct-analytics
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Existing UC catalog that holds the bronze, silver and gold schemas (create it once, or override with BUNDLE_VAR_catalog)
+    default: acme_rct_analytics
+  llm_endpoint:
+    description: Unity Gateway model service used by ai_query for the executive summary
+    default: system.ai.claude-haiku-5-5
+
+targets:
+  dev:
+    default: true
+    # no `mode: development`: it would prefix schema names, the data contract needs bronze, silver, gold
+    workspace:
+      profile: ivan-febar

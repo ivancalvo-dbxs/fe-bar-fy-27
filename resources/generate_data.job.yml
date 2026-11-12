@@ -1,0 +1,19 @@
+resources:
+  jobs:
+    generate_data:
+      name: acme-rct-generate-synthetic-data
+      description: Writes the synthetic retail/CPG dataset into the bronze raw_synthetic volume (overwrite, idempotent)
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+      tasks:
+        - task_key: generate
+          environment_key: default
+          notebook_task:
+            notebook_path: ../src/generate_data.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"

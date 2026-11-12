@@ -1,0 +1,22 @@
+resources:
+  schemas:
+    bronze:
+      catalog_name: ${var.catalog}
+      name: bronze
+      comment: Raw synthetic files and 1:1 bronze tables
+    silver:
+      catalog_name: ${var.catalog}
+      name: silver
+      comment: Cleaned and conformed entities
+    gold:
+      catalog_name: ${var.catalog}
+      name: gold
+      comment: Business aggregates consumed by the app
+
+  volumes:
+    raw_synthetic:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.bronze.name}
+      name: raw_synthetic
+      volume_type: MANAGED
+      comment: Parquet files written by the synthetic data job
