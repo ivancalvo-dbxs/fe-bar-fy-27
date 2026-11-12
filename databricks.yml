@@ -18,14 +18,16 @@ variables:
   lakebase_project:
     description: Dedicated ACME Lakebase project name
     default: acme-rct-serving
+  genie_warehouse_name:
+    description: Display name of the existing warehouse used by Genie
+    # Override with BUNDLE_VAR_genie_warehouse_name for another workspace.
+    default: Serverless Starter Warehouse
   genie_warehouse:
     description: Existing warehouse used only by Genie
     lookup:
-      warehouse: Serverless Starter Warehouse
+      warehouse: ${var.genie_warehouse_name}
 
 targets:
   dev:
     default: true
     # no `mode: development`: it would prefix schema names, the data contract needs bronze, silver, gold
-    workspace:
-      profile: ivan-febar
