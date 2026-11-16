@@ -1,26 +1,25 @@
--- Bronze: 1:1 copies of the synthetic parquet files.
--- Materialized views (batch read_files) so a regenerated dataset replaces, never duplicates, the data.
+-- Bronze: incrementally ingest synthetic parquet files with Auto Loader.
 
-CREATE OR REFRESH MATERIALIZED VIEW bronze.customers AS
+CREATE OR REFRESH STREAMING TABLE bronze.customers_incremental AS
 SELECT *, _metadata.file_path AS _source_file, current_timestamp() AS _ingested_at
-FROM read_files('${volume_path}/customers', format => 'parquet');
+FROM STREAM read_files('${volume_path}/customers', format => 'parquet');
 
-CREATE OR REFRESH MATERIALIZED VIEW bronze.products AS
+CREATE OR REFRESH STREAMING TABLE bronze.products_incremental AS
 SELECT *, _metadata.file_path AS _source_file, current_timestamp() AS _ingested_at
-FROM read_files('${volume_path}/products', format => 'parquet');
+FROM STREAM read_files('${volume_path}/products', format => 'parquet');
 
-CREATE OR REFRESH MATERIALIZED VIEW bronze.stores AS
+CREATE OR REFRESH STREAMING TABLE bronze.stores_incremental AS
 SELECT *, _metadata.file_path AS _source_file, current_timestamp() AS _ingested_at
-FROM read_files('${volume_path}/stores', format => 'parquet');
+FROM STREAM read_files('${volume_path}/stores', format => 'parquet');
 
-CREATE OR REFRESH MATERIALIZED VIEW bronze.promotions AS
+CREATE OR REFRESH STREAMING TABLE bronze.promotions_incremental AS
 SELECT *, _metadata.file_path AS _source_file, current_timestamp() AS _ingested_at
-FROM read_files('${volume_path}/promotions', format => 'parquet');
+FROM STREAM read_files('${volume_path}/promotions', format => 'parquet');
 
-CREATE OR REFRESH MATERIALIZED VIEW bronze.orders AS
+CREATE OR REFRESH STREAMING TABLE bronze.orders_incremental AS
 SELECT *, _metadata.file_path AS _source_file, current_timestamp() AS _ingested_at
-FROM read_files('${volume_path}/orders', format => 'parquet');
+FROM STREAM read_files('${volume_path}/orders', format => 'parquet');
 
-CREATE OR REFRESH MATERIALIZED VIEW bronze.order_items AS
+CREATE OR REFRESH STREAMING TABLE bronze.order_items_incremental AS
 SELECT *, _metadata.file_path AS _source_file, current_timestamp() AS _ingested_at
-FROM read_files('${volume_path}/order_items', format => 'parquet');
+FROM STREAM read_files('${volume_path}/order_items', format => 'parquet');
