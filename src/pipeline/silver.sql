@@ -7,7 +7,7 @@ CREATE OR REFRESH MATERIALIZED VIEW silver.customers (
   CONSTRAINT valid_segment EXPECT (segment IN ('Enterprise', 'Mid-Market', 'SMB')) ON VIOLATION DROP ROW,
   CONSTRAINT customers_pk PRIMARY KEY (customer_id)
 ) AS
-SELECT customer_id, customer_name, segment, region FROM bronze.customers;
+SELECT customer_id, customer_name, segment, region FROM bronze.customers_incremental;
 
 CREATE OR REFRESH MATERIALIZED VIEW silver.products (
   product_id BIGINT NOT NULL,
@@ -19,7 +19,7 @@ CREATE OR REFRESH MATERIALIZED VIEW silver.products (
   CONSTRAINT positive_price EXPECT (unit_price > 0) ON VIOLATION DROP ROW,
   CONSTRAINT products_pk PRIMARY KEY (product_id)
 ) AS
-SELECT product_id, product_name, category, brand, unit_price, unit_cost FROM bronze.products;
+SELECT product_id, product_name, category, brand, unit_price, unit_cost FROM bronze.products_incremental;
 
 CREATE OR REFRESH MATERIALIZED VIEW silver.promotions (
   promotion_id BIGINT NOT NULL,
@@ -31,7 +31,7 @@ CREATE OR REFRESH MATERIALIZED VIEW silver.promotions (
   CONSTRAINT valid_window EXPECT (end_date >= start_date) ON VIOLATION DROP ROW,
   CONSTRAINT promotions_pk PRIMARY KEY (promotion_id)
 ) AS
-SELECT promotion_id, promotion_name, category, discount_pct, start_date, end_date FROM bronze.promotions;
+SELECT promotion_id, promotion_name, category, discount_pct, start_date, end_date FROM bronze.promotions_incremental;
 
 CREATE OR REFRESH MATERIALIZED VIEW silver.order_lines (
   order_id BIGINT NOT NULL,
@@ -54,6 +54,6 @@ SELECT i.order_id, i.line_no, o.order_date, o.customer_id, i.product_id, o.store
        i.quantity,
        round(i.quantity * i.unit_price * (1 - i.discount_pct / 100.0), 2) AS revenue,
        round(i.quantity * i.unit_cost, 2) AS cost
-FROM bronze.order_items i
-JOIN bronze.orders o ON o.order_id = i.order_id AND o.status = 'completed'
-JOIN bronze.stores s ON s.store_id = o.store_id;
+FROM bronze.order_items_incremental i
+JOIN bronze.orders_incremental o ON o.order_id = i.order_id AND o.status = 'completed'
+JOIN bronze.stores_incremental s ON s.store_id = o.store_id;
